@@ -1,9 +1,12 @@
+version: '3.8'
+
 services:
   backend:
     build:
       context: ./backend
+    container_name: backend-container
     ports:
-      - "8080:8080"
+      - "5000:5000"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/employee_management
       - SPRING_DATASOURCE_USERNAME=root
@@ -15,7 +18,7 @@ services:
       mongodb:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/actuator/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -23,6 +26,7 @@ services:
   frontend:
     build:
       context: ./frontend
+    container_name: frontend-container
     ports:
       - "3000:80"
     depends_on:
@@ -30,6 +34,7 @@ services:
 
   mysql:
     image: mysql:8.0
+    container_name: mysql-container
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: employee_management
@@ -43,6 +48,7 @@ services:
 
   mongodb:
     image: mongo:6.0
+    container_name: mongo-container
     ports:
       - "27017:27017"
     healthcheck:
