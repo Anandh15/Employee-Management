@@ -20,22 +20,6 @@ pipeline {
         // =========================
         // Frontend Build
         // =========================
-        stage('Frontend - Install Dependencies') {
-            steps {
-                dir('frontend') {
-                    sh 'npm install'
-                }
-            }
-        }
-
-        stage('Frontend - Build') {
-            steps {
-                dir('frontend') {
-                    sh 'npm run build'
-                }
-            }
-        }
-
         stage('Frontend - Build Docker Image') {
             steps {
                 dir('frontend') {
@@ -50,7 +34,7 @@ pipeline {
         stage('Backend - Build Docker Image') {
             steps {
                 dir('backend') {
-                    sh "docker build --platform linux/amd64 -t ${BACKEND_REPO}:${IMAGE_TAG} ."
+                    sh "docker build -t ${BACKEND_REPO}:${IMAGE_TAG} ."
                 }
             }
         }
@@ -90,40 +74,24 @@ pipeline {
                 // Stop old containers
                 sh 'docker rm -f frontend-container || true'
                 sh 'docker rm -f backend-container || true'
-                sh 'docker rm -f mysql-container || true'
-                sh 'docker rm -f mongo-container || true'
 
                 // Pull latest images
                 sh "docker pull ${FRONTEND_REPO}:latest"
                 sh "docker pull ${BACKEND_REPO}:latest"
 
-                // Start MySQL
-                sh '''
-                docker run -d --name mysql-container \
-                    -e MYSQL_ROOT_PASSWORD=password \
-                    -e MYSQL_DATABASE=employee_management \
-                    -p 3306:3306 \
-                    mysql:8.0
-                '''
-
-                // Start MongoDB
-                sh '''
-                docker run -d --name mongo-container \
-                    -p 27017:27017 \
-                    mongo:6.0
-                '''
-
-                // Start Backend
+                // Start Backend (5000)
                 sh '''
                 docker run -d --name backend-container \
-                    -p 5000:5000 \
-                    --link mysql-container:mysql \
-                    --link mongo-container:mongodb \
+                    -p 5000:8080 \
                     ${BACKEND_REPO}:latest
                 '''
 
-                // Start Frontend
-                sh "docker run -d --name frontend-container -p 3000:80 ${FRONTEND_REPO}:latest"
+                // Start Frontend (3000)
+                sh '''
+                docker run -d --name frontend-container \
+                    -p 3000:80 \
+                    ${FRONTEND_REPO}:latest
+                '''
             }
         }
     }
