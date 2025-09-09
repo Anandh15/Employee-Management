@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         FRONTEND_REPO = 'anandh15/frontend-app'
-        BACKEND_REPO = 'anandh15/backend-app'
-        IMAGE_TAG = "${env.GIT_COMMIT.take(7)}" // unique tag using commit hash
+        BACKEND_REPO  = 'anandh15/backend-app'
+        IMAGE_TAG     = "${env.GIT_COMMIT.take(7)}" // unique tag using commit hash
     }
 
     stages {
@@ -73,6 +73,29 @@ pipeline {
             steps {
                 sh "docker push ${FRONTEND_REPO}:${IMAGE_TAG}"
                 sh "docker push ${BACKEND_REPO}:${IMAGE_TAG}"
+            }
+        }
+
+        // =========================
+        // Deploy Containers
+        // =========================
+        stage('Deploy Containers') {
+            steps {
+                sh """
+                    # Stop and remove old containers if running
+                    docker rm -f frontend-container || true
+                    docker rm -f backend-container || true
+
+                    # Pull latest images
+                    docker pull ${FRONTEND_REPO}:${IMAGE_TAG}
+                    docker pull ${BACKEND_REPO}:${IMAGE_TAG}
+
+                    # Run frontend container on port 3000
+                    docker run -d --name frontend-container -p 3000:3000 ${FRONTEND_REPO}:${IMAGE_TAG}
+
+                    # Run backend container on port 5000 (instead of 8080, since Jenkins uses 8080)
+                    docker run -d --name backend-container -p 5000:8080 ${BACKEND_REPO}:${IMAGE_TAG}
+                """
             }
         }
     }
