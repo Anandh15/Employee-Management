@@ -75,24 +75,5 @@ pipeline {
                 sh "docker push ${BACKEND_REPO}:${IMAGE_TAG}"
             }
         }
-
-        // =========================
-        // Deploy Fullstack App with Docker Compose
-        // =========================
-        stage('Deploy Fullstack with DB') {
-            steps {
-                // Stop existing containers
-                sh "docker-compose down"
-
-                // Pull latest images for backend/frontend if needed
-                // sh "docker-compose pull"
-
-                // Start all services including MySQL, MongoDB, backend, and frontend
-                sh "docker-compose up -d --build"
-
-                // Optional: Wait for databases to be healthy
-                sh "docker-compose ps"
-            }
-        }
     }
 }
