@@ -4,7 +4,7 @@ pipeline {
     environment {
         FRONTEND_REPO = 'anandh15/frontend-app'
         BACKEND_REPO  = 'anandh15/backend-app'
-        IMAGE_TAG     = "${env.GIT_COMMIT.take(7)}" // unique tag using commit hash
+        IMAGE_TAG     = "${env.GIT_COMMIT.take(7)}"  // short commit hash
     }
 
     stages {
@@ -18,7 +18,7 @@ pipeline {
         }
 
         // =========================
-        // Frontend Build & Docker
+        // Frontend Build
         // =========================
         stage('Frontend - Install Dependencies') {
             steps {
@@ -45,11 +45,12 @@ pipeline {
         }
 
         // =========================
-        // Backend Build & Docker
+        // Backend Build
         // =========================
         stage('Backend - Build Docker Image') {
             steps {
                 dir('backend') {
+                    // This uses your Dockerfile with Java 11 (maven:3.8.6-openjdk-11 + openjdk:11-jre-slim)
                     sh "docker build --platform linux/amd64 -t ${BACKEND_REPO}:${IMAGE_TAG} ."
                 }
             }
@@ -73,6 +74,12 @@ pipeline {
             steps {
                 sh "docker push ${FRONTEND_REPO}:${IMAGE_TAG}"
                 sh "docker push ${BACKEND_REPO}:${IMAGE_TAG}"
+
+                // Also tag as 'latest' for easier deployment
+                sh "docker tag ${FRONTEND_REPO}:${IMAGE_TAG} ${FRONTEND_REPO}:latest"
+                sh "docker tag ${BACKEND_REPO}:${IMAGE_TAG} ${BACKEND_REPO}:latest"
+                sh "docker push ${FRONTEND_REPO}:latest"
+                sh "docker push ${BACKEND_REPO}:latest"
             }
         }
 
@@ -81,21 +88,19 @@ pipeline {
         // =========================
         stage('Deploy Containers') {
             steps {
-                sh """
-                    # Stop and remove old containers if running
-                    docker rm -f frontend-container || true
-                    docker rm -f backend-container || true
+                // Stop and remove any old containers
+                sh 'docker rm -f frontend-container || true'
+                sh 'docker rm -f backend-container || true'
 
-                    # Pull latest images
-                    docker pull ${FRONTEND_REPO}:${IMAGE_TAG}
-                    docker pull ${BACKEND_REPO}:${IMAGE_TAG}
+                // Pull latest images
+                sh "docker pull ${FRONTEND_REPO}:latest"
+                sh "docker pull ${BACKEND_REPO}:latest"
 
-                    # Run frontend container on port 3000
-                    docker run -d --name frontend-container -p 3000:3000 ${FRONTEND_REPO}:${IMAGE_TAG}
+                // Run backend
+                sh "docker run -d --name backend-container -p 5000:8080 ${BACKEND_REPO}:latest"
 
-                    # Run backend container on port 5000 (instead of 8080, since Jenkins uses 8080)
-                    docker run -d --name backend-container -p 5000:8080 ${BACKEND_REPO}:${IMAGE_TAG}
-                """
+                // Run frontend (React served by nginx)
+                sh "docker run -d --name frontend-container -p 3000:80 ${FRONTEND_REPO}:latest"
             }
         }
     }
