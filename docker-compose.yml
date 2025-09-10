@@ -1,39 +1,51 @@
 version: '3.8'
 
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-container
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: employee_management
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  mongodb:
+    image: mongo:6.0
+    container_name: mongo-container
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
   backend:
     image: anandh15/backend-app:latest
     container_name: backend-container
+    restart: always
     ports:
       - "5000:8080"
-    # environment:
-    #   SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/employee_management
-    #   SPRING_DATASOURCE_USERNAME: root
-    #   SPRING_DATASOURCE_PASSWORD: password
-    #   SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/employee_management
-    # depends_on:
-    #   - mysql
-    #   - mongodb
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/employee_management
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/employee_management
+    depends_on:
+      - mysql
+      - mongodb
 
   frontend:
     image: anandh15/frontend-app:latest
     container_name: frontend-container
+    restart: always
     ports:
       - "3000:80"
     depends_on:
       - backend
 
-  # mysql:
-  #   image: mysql:8.0
-  #   container_name: mysql-container
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: password
-  #     MYSQL_DATABASE: employee_management
-  #   ports:
-  #     - "3306:3306"
-
-  # mongodb:
-  #   image: mongo:6.0
-  #   container_name: mongo-container
-  #   ports:
-  #     - "27017:27017"
+volumes:
+  mysql_data:
+  mongo_data:
