@@ -71,25 +71,54 @@ pipeline {
         // =========================
         stage('Deploy Containers') {
             steps {
-                // Stop old containers
-                sh 'docker rm -f frontend-container || true'
-                sh 'docker rm -f backend-container || true'
+                // Stop old containers (if any)
+                sh '''
+                docker rm -f frontend-container || true
+                docker rm -f backend-container || true
+                docker rm -f mysql-container || true
+                docker rm -f mongo-container || true
+                '''
 
                 // Pull latest images
-                sh "docker pull ${FRONTEND_REPO}:latest"
-                sh "docker pull ${BACKEND_REPO}:latest"
+                sh '''
+                docker pull ${FRONTEND_REPO}:latest
+                docker pull ${BACKEND_REPO}:latest
+                '''
 
-                // Start Backend (5000)
+                // Start MySQL
+                sh '''
+                docker run -d --name mysql-container \
+                    -e MYSQL_ROOT_PASSWORD=password \
+                    -e MYSQL_DATABASE=employee_management \
+                    -p 3306:3306 \
+                    mysql:8.0
+                '''
+
+                // Start MongoDB
+                sh '''
+                docker run -d --name mongo-container \
+                    -p 27017:27017 \
+                    mongo:6.0
+                '''
+
+                // Start Backend (depends on MySQL + MongoDB)
                 sh '''
                 docker run -d --name backend-container \
                     -p 5000:8080 \
+                    --link mysql-container:mysql \
+                    --link mongo-container:mongodb \
+                    -e SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/employee_management \
+                    -e SPRING_DATASOURCE_USERNAME=root \
+                    -e SPRING_DATASOURCE_PASSWORD=password \
+                    -e SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/employee_management \
                     ${BACKEND_REPO}:latest
                 '''
 
-                // Start Frontend (3000)
+                // Start Frontend (depends on Backend)
                 sh '''
                 docker run -d --name frontend-container \
                     -p 3000:80 \
+                    --link backend-container:backend \
                     ${FRONTEND_REPO}:latest
                 '''
             }
