@@ -9,7 +9,7 @@ services:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: employee_management
     ports:
-      - "3307:3306"   # host:container (use localhost:3307 outside, mysql:3306 inside network)
+      - "3307:3306"   # host:container → connect from Workbench using localhost:3307
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -27,7 +27,8 @@ services:
     volumes:
       - mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      # ✅ using mongosh instead of mongo (mongo removed in MongoDB 6+)
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
