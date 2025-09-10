@@ -9,9 +9,14 @@ services:
       MYSQL_ROOT_PASSWORD: admin
       MYSQL_DATABASE: employee_management
     ports:
-      - "3307:3306"
+      - "3307:3306"   # host:container (use localhost:3307 outside, mysql:3306 inside network)
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-padmin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mongodb:
     image: mongo:6.0
@@ -21,6 +26,11 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     image: anandh15/backend-app:latest
@@ -34,8 +44,10 @@ services:
       SPRING_DATASOURCE_PASSWORD: admin
       SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/employee_management
     depends_on:
-      - mysql
-      - mongodb
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
 
   frontend:
     image: anandh15/frontend-app:latest
